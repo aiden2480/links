@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        var handlers = [];
+        var returned = 0;
+        var username = "aiden2480";
+
+        function generate() {
+            /* Get list of repositories */
+            var http = new XMLHttpRequest();
+            var container = document.getElementById("container");
+            
+            http.open("GET", `https://api.github.com/users/${username}/repos`);
+            http.send();
+            
+            http.onreadystatechange = function(){requestReposCallback(http)};
+        }
+
+        function requestReposCallback(handler) {
+            var text = handler.responseText;
+            var soup = JSON.parse(text);
+            var _repos = [];
+            var _ids = [];
+
+            for (var i = 0; i < soup.length; i++) {
+                _repos.push(soup[i]["name"]);
+                _ids.push(soup[i]["id"]);
+            }
+            
+            /* Display result */
+            repos = _repos;
+            ids = _ids;
+            console.log(repos);
+            container.innerHTML = "";
+
+            /* Create elements */
+            for (var i = 0; i < repos.length; i++) {
+                var outer = document.createElement("p");
+                var inner = document.createElement("a");
+                
+                outer.id = `r${ids[i]}`;
+                outer.innerText = "⌛ ";
+                inner.innerText = repos[i];
+                inner.href = `https://${username}.github.io/${repos[i]}/`;
+                
+                outer.appendChild(inner);
+                container.appendChild(outer);
+            }
+
+            /* Create handlers */
+            for (var i = 0; i < repos.length; i++) {
+                var dead = new XMLHttpRequest();
+
+                dead.reponame = repos[i];
+                dead.repoid = ids[i];
+                dead.open("GET", `https://${username}.github.io/${repos[i]}/`);
+                dead.onreadystatechange = function(){countCallback()};
+                dead.send();
+
+                handlers.push(dead);
+            }
+        }
+
+        function countCallback() {
+            returned += 1;
+            if (repos.length == returned) {
+                console.log("all returned");
+                console.log(handlers);
+
+                for (var i = 0; i < handlers.length; i++) {
+                    console.log("hello?");
+                    var elem = document.querySelector(`#container #r${handlers[i].repoid}`);
+                    var link = elem.querySelector("a");
+                    var conv = {200:"✅", 404:"❌"};
+
+                    console.log(elem);
+                    console.log(handlers[i].status);
+
+                    elem.innerText = (conv[handlers[i].status] || "🔵") + " "
+                    console.log(elem.innerText);
+                    elem.appendChild(link);
+                }
+            }
+        }
+    </script>
+</head>
+<body onload="generate()" style="font-family: Consolas;">
+    <div id="container">
+        <p>Content loading</p>
+    </div>
+</body>
+</html>
