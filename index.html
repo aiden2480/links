@@ -2,39 +2,32 @@
 <html>
 <head>
     <script>
-        var handlers = [];
-        var returned = 0;
-        var username = "aiden2480";
+        var container = document.getElementById("container");
+        var username;
+        var repos = [];
+        var ids = [];
 
-        function generate() {
+        function generate(uname="aiden2480") {
             /* Get list of repositories */
-            var http = new XMLHttpRequest();
-            var container = document.getElementById("container");
+            username = uname;
             
-            http.open("GET", `https://api.github.com/users/${username}/repos`);
-            http.send();
-            
-            http.onreadystatechange = function(){requestReposCallback(http)};
+            fetch(`https://api.github.com/users/${username}/repos`).then((resp) => {
+                resp.json().then((data) => {
+                    for (let i=0; i < data.length; i++) {
+                        repos.push(data[i]["name"]);
+                        ids.push(data[i]["id"]);
+                    }
+
+                    createElements();
+                    sendRequests();
+                });
+            });
         }
 
-        function requestReposCallback(handler) {
-            var text = handler.responseText;
-            var soup = JSON.parse(text);
-            var _repos = [];
-            var _ids = [];
+        function createElements() {
+            var container = document.getElementById("container");
+            container.innerText = "";
 
-            for (var i = 0; i < soup.length; i++) {
-                _repos.push(soup[i]["name"]);
-                _ids.push(soup[i]["id"]);
-            }
-            
-            /* Display result */
-            repos = _repos;
-            ids = _ids;
-            console.log(repos);
-            container.innerHTML = "";
-
-            /* Create elements */
             for (var i = 0; i < repos.length; i++) {
                 var outer = document.createElement("p");
                 var inner = document.createElement("a");
@@ -47,40 +40,24 @@
                 outer.appendChild(inner);
                 container.appendChild(outer);
             }
-
-            /* Create handlers */
-            for (var i = 0; i < repos.length; i++) {
-                var dead = new XMLHttpRequest();
-
-                dead.reponame = repos[i];
-                dead.repoid = ids[i];
-                dead.open("GET", `https://${username}.github.io/${repos[i]}/`);
-                dead.onreadystatechange = function(){countCallback()};
-                dead.send();
-
-                handlers.push(dead);
-            }
         }
 
-        function countCallback() {
-            returned += 1;
-            if (repos.length == returned) {
-                console.log("all returned");
-                console.log(handlers);
+        function sendRequests() {
+            var container = document.getElementById("container");
+            
+            for (let i=0; i < repos.length; i++) {
+                let url = encodeURIComponent(`https://${username}.github.io/${repos[i]}/`);
+                let elem = container.querySelector(`#r${ids[i]}`);
+                let link = elem.querySelector("a");
 
-                for (var i = 0; i < handlers.length; i++) {
-                    console.log("hello?");
-                    var elem = document.querySelector(`#container #r${handlers[i].repoid}`);
-                    var link = elem.querySelector("a");
-                    var conv = {200:"✅", 404:"❌"};
+                fetch(`https://api.allorigins.win/get?url=${url}`).then((resp) => {
+                    resp.json().then((data) => {
+                        console.log(data.status.url, "returned", data.status.http_code);
 
-                    console.log(elem);
-                    console.log(handlers[i].status);
-
-                    elem.innerText = (conv[handlers[i].status] || "🔵") + " "
-                    console.log(elem.innerText);
-                    elem.appendChild(link);
-                }
+                        elem.innerText = (data.status.http_code != 404) ? "✅" : "❌";
+                        elem.appendChild(link);
+                    })
+                })
             }
         }
     </script>
